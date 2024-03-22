@@ -1,0 +1,6 @@
+car (pair a b) => a
+cdr (pair a b) => b
+
+cons a b => pair a b
+
+print (cdr (cons 1 2)) =2

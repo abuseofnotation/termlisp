@@ -1,0 +1,8 @@
+true => bool true
+false => bool false
+
+if (bool true) a b => a
+if (bool false) a b => b
+
+print (if (true) this-is-true this-is-false)
+

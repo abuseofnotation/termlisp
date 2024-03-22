@@ -1,0 +1,4 @@
+0 => nat zero
++1 (nat a) =>  nat (succ a)
+print (+1 0) NatSucZero
+print (+1 (+1 0)) NatSucSucZero
