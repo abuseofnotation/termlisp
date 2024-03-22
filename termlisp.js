@@ -7,7 +7,7 @@ const rl = readline.createInterface({ input: process.stdin, output: process.stdo
 const prompt = (query) => new Promise((resolve) => rl.question(query, resolve));
 
 const execInteractive = (program) => {
-  let [env, result] = execString(program, {})
+  let [env, result] = execString(program, { stack: [], functions: {}, types: {}})
   const repl = () => prompt('> ')
     .then((line) => { [env, result ] = execString('(print (' + line + '))', env)})
     .then(repl)

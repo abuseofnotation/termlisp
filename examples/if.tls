@@ -1,8 +1,8 @@
-true => bool true
-false => bool false
+True => bool true
+False => bool false
 
-if (bool true) a b => a
-if (bool false) a b => b
+if True a _ => a
+if False _ a => a
 
-print (if (true) this-is-true this-is-false)
-
+print (if False this-is-true this-is-false)
+print (if True this-is-true this-is-false)
