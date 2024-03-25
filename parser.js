@@ -26,6 +26,9 @@ const splitBrackets = (expr) => {
     }
   }
   flush()
+  if (expressionStack.length > 1) {
+    throw (`Parsing error: there are ${expressionStack.length - 1 } missing closing brackets`)
+  }
   return result
 }
 //console.log(splitBrackets('a (a + b) b'), ["a", ["a", "+", "b"], "b"])

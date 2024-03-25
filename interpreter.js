@@ -1,7 +1,7 @@
 const {name, parse } = require('./parser')
 
-const reportError = (error, env) => {
-  console.log("Error: " + error)
+const reportError = (error, env, object) => {
+  console.log("Error: " + error, object)
   for (line of env.stack) {
     console.log("  at  "+ formatExpression(line))
   }
@@ -16,106 +16,149 @@ const formatExpression = (expression) => {
   }
 }
 
+const isConstant = ( word ) => {
+  return word[0] !== word[0].toLowerCase();
+}
 
-const argsToEnv = (names, args, externalEnv) => {
+const argsToEnv = (names, args, env) => {
   if (names.length !== args.length) {
-    console.error({names, args})
-    reportError("Wrong number of arguments", externalEnv)
+    reportError("Wrong number of arguments", env, {names, args})
   } else {
-    return names.reduce((env, name, i) => {
-      if (typeof name === "string") {
-        //console.log({name, arg: args[i]})
-          //console.log(env[name])
-        if (env[name] !== undefined) {
-          if (args[i] !== name) {
-            return reportError(`Unsuccessfull pattern match, called with ${name}, expected ${args[i]}`)
+    const argumentEnv = execFunctionArguments(env, names).reduce((argumentEnv, name, i) => {
+      let value = args[i]
+      console.log(`Matching expression ${formatExpression(name)} with value ${formatExpression(value)}`);
+
+      if (typeof name === 'string') {
+        // Constant only match other constants
+        if (isConstant(name)) {
+          if (value !== name) {
+            return reportError(`Unsuccessfull pattern match, called with ${name}, expected ${value}`, env, {names, args})
+          // Constant only match other constants
           } else {
-            console.log(name, args[i])
+            //console.log(name, value)
             // We don't do anything in case of a successfull pattern match
           }
+        // normal values match everything
         } else {
-          env[name] = { args: [], expression: args[i]}
+          argumentEnv[name] = [{ args: [], expression: value}]
         }
       } else {
         // We assume that the argument is a pattern match
         // we typecheck it and add the elements
-        const arg = args[i]
         const [nameType, ...nameVals]= name
-        const [argType, ...argVals]= arg
-        console.log({name, arg})
+        const [argType, ...argVals]= value
         if (nameType !== argType) {
-          console.log({name, arg})
-          reportError(`Expected a ${nameType}, but got ${argType}`, externalEnv)
+          reportError(`Expected a(n) ${nameType}, but got ${argType}`, env, {name, value})
         } else if (nameVals.length !== argVals.length){
-          console.log({nameVals, argVals})
-          reportError(`Expected a ${nameVals.length} arguments , but got ${argVals.length}`, externalEnv)
+          reportError(`Expected a ${nameVals.length} arguments , but got ${argVals.length}`, env, {nameVals, argVals})
         } else {
-          Object.assign(env, argsToEnv(nameVals, argVals, externalEnv))
+          Object.assign(argumentEnv, argsToEnv(nameVals, argVals, env))
         }
       }
-      return env
+      return argumentEnv
     }, {})
+
+    //console.log("Argument environment", argumentEnv)
+    return argumentEnv
   }
 }
 
 const primitiveEnv = {
-  print: (value, env) => console.log(formatExpression(value)),
+  print: (value, env) => {
+    //console.log('Environment:', env.functions)
+
+  for (line of env.stack) {
+    console.log("   "+ formatExpression(line))
+  }
+
+    // only needed in lazy evaluation
+    //value = exec(env, value)[1]
+    console.log(formatExpression(value))
+  },
+
   "#": () => undefined,
   env: (value, env) => console.log(env)
 }
 
 const execPrimitive = (env, expression) => 
-    env.functions[expression] ? exec(env, env.functions[expression].expression)[1] : expression
+    env.functions[expression] && env.functions[expression].length > 0 ? exec(env, env.functions[expression][0].expression)[1] : expression
 
 const execFunctionDefinition = (env, definition) => {
     const fnIndex = definition.indexOf('=>')
-    const [signature, functionExpression] = [definition.slice(0, fnIndex), definition.slice(fnIndex + 1) ]
+    const [signature, expression] = [definition.slice(0, fnIndex), definition.slice(fnIndex + 1) ]
     const [name, ...args] = signature
-    env.functions[name] = {args, expression: functionExpression}
+    const fun = {args, expression}
+    if (env.functions[name] === undefined) {
+      env.functions[name] = [fun]
+    } else {
+      env.functions[name].push(fun)
+    }
+    //console.log(exec(env, functionExpression))
     return [env, null]
 }
 
+//TODO perhaps we can use the function that execs a bunch of statements sequentially
+const execFunctionArguments = (env, argsUnexecuted) => argsUnexecuted.map((arg) => exec(env, arg)[1])
 
 const cloneEnv = (env, functions, stackFrame) => ({
-    stack: [stackFrame].concat(env.stack.slice()),
+    stack: env.stack.slice(),
     functions: {...env.functions, ...functions},
     types: env.types,
 })
 
+const execDataConstructor = (env, name, args) => {
+  if (args.length > 0) {
+    return [env, [name, ...args]]
+  } else {
+    return [env, name]
+  }
+}
+
 const execFunctionApplication = (env, expression) => {
+    env.stack.push(expression)
     //Each expression is a name, and arguments
     const [name, ...argsUnexecuted] = expression
     //First exec the arguments
-    const args = argsUnexecuted.map((arg) => {
-      const envArgument = exec(env, arg)
-      if (envArgument.length !== 2) {
-        console.log(envArgument)
-        reportError(`Expected for exec to return an env and an evaluated argument`, env)
-      } else {
-        return envArgument[1]
-      }
-    })
+    const args = execFunctionArguments(env, argsUnexecuted)
+
+    //Arguments are evaluated lazily, when printing
+    //const args = argsUnexecuted
+    //console.log("Executing arguments:", {argsUnexecuted, args})
+
     //check if val is a function 
     // if it is a function, execute it.
     if (env.functions[name] !== undefined) {
-      const func = env.functions[name]
-      // console.log("Executing function call", func, args)
-      const functionArguments = argsToEnv(func.args.slice(), args, env)
-      const newEnv = cloneEnv(env, functionArguments, env.functions[name])
-      return exec(newEnv, func.expression)
+      if (env.functions[name].length > 0) {
+        const func = env.functions[name][0]
+        const functionArguments = argsToEnv(func.args.slice(), args, env)
+        //console.log("Executing function call", {func, args, functionArguments})
+        const newEnv = cloneEnv(env, functionArguments)
+        return exec(newEnv, func.expression)
+      } else {
+
+        // console.log("Returning a data constructor", [name, ...args])
+      
+        return execDataConstructor(env, name, args)
+      }
     } else if (primitiveEnv[name] !== undefined) {
       //check if val is a foreign function
       // if it is a function, execute it.
       return [env, primitiveEnv[name](args, env)]
-    // if the name isn't a function, then we assume it's a data constructor
-    // so we exec the values and return it as is
     } else {
+      // if the name isn't a function, then we assume it's a data constructor i.e. a function without a definition
+      // so we exec the values and return it as is
+      /*
       env.types[name] = env.types[name] || new Set()
       if (args.length === 1 && typeof args[0] === 'string') {
         env.types[name].add(args[0])
         // console.log("Added new constant value", env.types[name])
       }
-      return [env, [name, ...args]]
+      */
+      // console.log("Returning a new data constructor", [name, ...args])
+
+      return execDataConstructor(env, name, args)
+      //TODO, record the constructor for typechecking purposes
+      //: return [cloneEnv(env, {[name]: {}}, []), [name, ...args]]
     }
 }
 
@@ -125,31 +168,29 @@ const exec = (env, expression) => {
     reportError("Stack Overflow", env)
   }
   if (!Array.isArray(expression)) {
-    //console.log("Executing primitive", expression)
-    return [env, execPrimitive(env, expression)]
-
+    return exec(env, [expression])
   } else {
+    //console.log("Executing expression", formatExpression(expression))
+    //console.log("with stack          ", formatExpression(env.stack))
+    //console.log("with environment", env.functions)
     const fnIndex = expression.indexOf('=>')
-    //console.log("Executing composite", expression)
 
-    if (expression.length === 1) {
-      // Remove needless brackets
-      return exec(env, expression[0])
-
-    } else if (fnIndex !== -1 ) {
+    if (fnIndex !== -1 ) {
       //Executing function definition
       return execFunctionDefinition(env, expression)
 
     //TODO functions are not always literals, account for that
     } else if (typeof expression[0] === 'string') {
+
+      console.log("Executing application:", formatExpression(expression))
       return execFunctionApplication(env, expression)
     } else {
       //Exec a bunch of statements
 
       let localEnv = env
       let localExpression = null
-      //console.log({localEnv, expression})
       for (let anExpression of expression) {
+        // console.log("Executing an expression from chain: ", formatExpression(anExpression))
         let [newLocalEnv, newExpression] = exec(localEnv, anExpression)
         localEnv = newLocalEnv
         localExpression = newExpression

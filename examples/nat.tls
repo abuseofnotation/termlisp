@@ -1,4 +1,4 @@
-0 => nat zero
+0 => nat Zero
 +1 (nat a) =>  nat (succ a)
 -1 (nat (succ a)) => nat a
 
@@ -6,12 +6,10 @@
 2 => +1 1
 3 => +1 2
 
+print 1
 print (-1 2) = 1
 
 + (nat (succ a)) 0 => nat (succ a)
-+ (nat (succ a)) (nat b) => nat (succ (+ (nat a) (nat b))
++ (nat (succ a)) (nat b) => nat (succ (+ (nat a) (nat b)))
 
-print (+ 1 1) 
 print (+ 1 0)
-
-print foo
