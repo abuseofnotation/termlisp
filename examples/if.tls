@@ -5,3 +5,8 @@ if true a _ => a
 if false _ a => a
 
 print (if true booleans-work-again booleans-don't-work)
+print (if false booleans-don't-work booleans-work)
+
+foo (a (b (c a))) => a 
+foo (a (b a )) 
+
