@@ -12,4 +12,3 @@ print (-1 2) = 1
 + (nat (succ a)) 0 => nat (succ a)
 + (nat (succ a)) (nat b) => nat (succ (+ (nat a) (nat b)))
 
-print (+ 1 0)

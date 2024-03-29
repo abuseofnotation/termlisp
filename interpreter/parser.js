@@ -19,6 +19,9 @@ const splitBrackets = (expr) => {
     } else if (char === ")") {
       flush()
       expressionStack.pop()
+      if (currentLevel()=== undefined) {
+        throw "Unmatched closing bracket"
+      }
     } else if (char === " ") {
       flush()
     } else {
@@ -34,8 +37,13 @@ const splitBrackets = (expr) => {
 //console.log(splitBrackets('a (a + b) b'), ["a", ["a", "+", "b"], "b"])
 //console.log(splitBrackets('(a (a + b)) b'), [["a",["a", "+", "b"]], "b"])
 //console.log(splitBrackets('aa bb (cc)'), ["aa","bb", ["cc"]])
+const removeComments = (program) => program.split('\n')
+  .map((line) => {
+    if (line[0] === ';' && line[1] === ';'){
+      return ''
+    } else {
+      return line
+    }
+  })
 
-
-exports.parse = (program) => splitBrackets("(" + program.replace(/\r?\n|\r/g, ')(')+ ")")
-
-
+exports.parse = (program) => splitBrackets("(" + removeComments(program) + ")")

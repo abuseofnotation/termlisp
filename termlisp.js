@@ -1,5 +1,5 @@
 const fs = require('node:fs');
-const {execString } = require('./interpreter')
+const {execString } = require('./interpreter/interpreter')
 
 const readline = require('readline');
 
