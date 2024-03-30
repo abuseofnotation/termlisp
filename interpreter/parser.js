@@ -37,13 +37,18 @@ const splitBrackets = (expr) => {
 //console.log(splitBrackets('a (a + b) b'), ["a", ["a", "+", "b"], "b"])
 //console.log(splitBrackets('(a (a + b)) b'), [["a",["a", "+", "b"]], "b"])
 //console.log(splitBrackets('aa bb (cc)'), ["aa","bb", ["cc"]])
-const removeComments = (program) => program.split('\n')
+const removeComments = (program) => program.split(/\r?\n/)
   .map((line) => {
     if (line[0] === ';' && line[1] === ';'){
       return ''
     } else {
       return line
     }
-  })
+  }).join('\n')
 
-exports.parse = (program) => splitBrackets("(" + removeComments(program) + ")")
+const print = (a) => {
+  //console.log(a)
+  return a
+}
+
+exports.parse = (program) => splitBrackets(print(removeComments(program)))

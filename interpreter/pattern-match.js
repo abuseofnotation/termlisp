@@ -5,8 +5,11 @@ const debug = false
 
 const patternMatchArgumentsByNames = (names, args, env) => {
 
-  if (debug) console.log(`Matching expressions ${formatExpression(names)} with values ${formatExpression(args)}`)
-  if (debug) console.log(`with environment`, env.functions)
+  if (names.length > 0) {
+    if (debug) console.log(`Matching expressions ${formatExpression(names)} with values ${formatExpression(args)}`)
+    if (debug) console.log(`with environment`, env.functions)
+  }
+
   if (names.length !== args.length) {
     return error(`Expected a ${names.length} arguments, but got ${args.length}`, env, {names, args})
   } else {
@@ -15,7 +18,7 @@ const patternMatchArgumentsByNames = (names, args, env) => {
        if (debug) console.log(`Matching expression ${formatExpression(name)} with value ${formatExpression(value)}`);
 
       if (typeof name === 'string') {
-        argumentEnv[name] = [{ args: [], expression: value}]
+        argumentEnv[name] = [{ args: [], expression: value, env}]
 
       // When we encounter data constructors,
       // we pattern-match it and add the elements
@@ -56,7 +59,7 @@ const patternMatchArgumentsByNames = (names, args, env) => {
       return argumentEnv
     }, {})
 
-    if (debug) console.log("Constructed argument environment", argumentEnv)
+    if (debug && Object.keys(argumentEnv).length > 0) console.log("Constructed argument environment", argumentEnv)
     return argumentEnv
   }
 }

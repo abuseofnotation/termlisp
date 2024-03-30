@@ -1,20 +1,19 @@
 (true => bool True)
 (false => bool False)
 
+
 (if (:literal true) a b => a)
 (if (:literal false) a b => b)
 
-(assert a b => print (if (eq a b) (success a is _b) (error a is-not-equal-to _b)))
+(assert a b => print (if (eq a b) (success a is b) (error a is-not-equal-to b)))
 
-;;(if (true) (success a ) (error a ))  -> (true) a b => a
-;;(success a) |  a -> success a, b -> error a
-;;(success success a)
-
-(assert aa aa)
-(assert bb cc)
+(assert someValue someOtherValue)
+(assert foo foo)
 
 (print (if (eq (a(b)) (a(b))) booleans-work-again booleans-don't-work))
 (print (if (eq (a(c)) ((a(v)))) booleans-don't-work booleans-work))
 
-(printBool (bool a) => print a)
+(printBool (bool a) => print bool a)
 (printBool true)
+
+if (eq 1 1) (print correct) (print non-correct)
