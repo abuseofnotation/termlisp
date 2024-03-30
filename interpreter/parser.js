@@ -47,8 +47,8 @@ const removeComments = (program) => program.split(/\r?\n/)
   }).join('\n')
 
 const print = (a) => {
-  //console.log(a)
+  console.log(a)
   return a
 }
 
-exports.parse = (program) => splitBrackets(print(removeComments(program)))
+exports.parse = (program) => print(splitBrackets(removeComments(program)))

@@ -3,7 +3,7 @@ const {formatExpression} = require('./helpers')
 const {patternMatchArgumentsByNames} = require('./pattern-match')
 const foreignFunctions = require('./foreign-functions')
 
-const debug = false
+const debug = true
 
 const print = (env, message, ...args) => console.log((env.stack.map(() => "-").join("")) + message , ...args)
 
@@ -45,7 +45,6 @@ const execFunctionApplication = (env, name, args) => {
     if (patternMatchIndex !== -1) {
       const func = implementations[patternMatchIndex]
       const functionArguments = patternMatches[patternMatchIndex]
-
       const newEnv = cloneEnv(func.env, functionArguments, env.stack.slice())
 
 
@@ -76,9 +75,12 @@ const execFunctionApplicationOrDataConstructor = (env, expression) => {
     const [name, ...argsUnexecuted] = expression
     //First exec the arguments
     const args = execFunctionArguments(env, argsUnexecuted)
-
-    //Arguments are evaluated lazily, when printing
-    //const args = argsUnexecuted
+    /*
+    const args = args.map((arg) => {
+      arg.env = env; 
+      return arg
+    })
+    */
    
     //check if val is a function 
     // if it is a function, execute it.
@@ -120,21 +122,18 @@ const execFunctionApplicationOrDataConstructor = (env, expression) => {
     }
 }
 
-const exec = (env, expression) => {
-  if (typeof env !== 'object') {throw `${env} is not an object` }
-  if (env.stack.length > 100) {
-    return error("Stack Overflow", env)
-  }
+const exec = (expression) => {
+  const env = expression.env
+
   if (!Array.isArray(expression)) {
-    if (typeof expression === 'string') {
-      return exec(env, [expression])
-    } else {
-      console.log(expression)
-      return error('Invalid expression ', env, formatExpression(expression))
-    }
+    return error('Invalid expression ', typeof expression , formatExpression(expression))
+  } else if (typeof env !== 'object') {
+    console.log('Error at evaluating ', expression, ".")
+    throw new Error(`${env} is not an object`)
+  } else if (env.stack.length > 100) {
+    return error("Stack Overflow", env)
   } else { 
     //if (debug) console.log("Executing expression", formatExpression(expression))
-
     const fnIndex = expression.indexOf('=>')
 
     if (fnIndex !== -1 ) {
@@ -155,10 +154,11 @@ const exec = (env, expression) => {
       let localEnv = env
       let localExpression = []
       for (let anExpression of expression) {
-        let [newLocalEnv, newExpression] = exec({...localEnv, stack: []}, anExpression)
+        anExpression.env = {...localEnv, stack: []}
+        let newExpression = exec(anExpression)
       debug && print(env, "Executing an expression from chain: ", formatExpression(anExpression))
-        if (debug) console.log("Updated environment", newLocalEnv.functions)
-        localEnv = newLocalEnv
+        if (debug) console.log("Updated environment", newExpression.env.functions)
+        localEnv = newExpression.env
         localExpression = newExpression
       }
       return [localEnv, localExpression]
@@ -176,13 +176,16 @@ const execFunctionDefinition = (env, definition) => {
     } else {
       env.functions[name].push(fun)
     }
-    //console.log(exec(env, functionExpression))
-    return [env, []]
+    const result = []
+    result.env = env 
+    return result
 }
 
 const execString = (string, env ) => {
   //console.log(formatExpression(parse(string)))
-  return exec(env, parse(string))
+  expression = parse(string)
+  expression.env = env
+  return exec(expression)
 }
 
 module.exports = { execString}

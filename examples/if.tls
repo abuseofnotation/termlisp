@@ -16,4 +16,4 @@
 (printBool (bool a) => print bool a)
 (printBool true)
 
-if (eq 1 1) (print correct) (print non-correct)
+(if (eq 1 1) (print correct) (print non-correct))
