@@ -3,7 +3,7 @@ const {formatExpression} = require('./helpers')
 const {patternMatchArgumentsByNames} = require('./pattern-match')
 const foreignFunctions = require('./foreign-functions')
 
-const debug = true
+const debug = false
 
 const print = (env, message, ...args) => console.log((env.stack.map(() => "-").join("")) + message , ...args)
 
@@ -11,14 +11,18 @@ const print = (env, message, ...args) => console.log((env.stack.map(() => "-").j
 const error = (error, env, object) => {
   const trace = env.stack.map((line) => "   at "+ formatExpression(line) + "\n")
   throw `Error: ${error} \n ${trace}`
-  return ([env, ['error', error, env, object]])
+  return (['error', error, env, object])
 }
 
 
 //TODO perhaps we can use the function that execs a bunch of statements sequentially
 const execFunctionArguments = (env, argsUnexecuted) => {
   const makeEnv = () => ({...env, stack: env.stack.slice()})
-  return argsUnexecuted.map((arg) => exec(makeEnv(), arg)[1])
+  return argsUnexecuted.map((arg) => {
+    const argument = typeof arg === 'string' ? [arg] : arg
+    argument.env = makeEnv()
+    return exec(argument)
+  })
 }
 
 const cloneEnv = (env, argumentFunctions, stack) => ({
@@ -28,12 +32,9 @@ const cloneEnv = (env, argumentFunctions, stack) => ({
 })
 
 const execDataConstructor = (env, name, args) => {
-
-  if (args.length > 0) {
-    return [env, [name, ...args]]
-  } else {
-    return [env, name]
-  }
+  const expression = args.length > 0 ? [name, ...args] : name
+  expression.env = env
+  return expression
 }
 
 const execFunctionApplication = (env, name, args) => {
@@ -45,7 +46,8 @@ const execFunctionApplication = (env, name, args) => {
     if (patternMatchIndex !== -1) {
       const func = implementations[patternMatchIndex]
       const functionArguments = patternMatches[patternMatchIndex]
-      const newEnv = cloneEnv(func.env, functionArguments, env.stack.slice())
+      const expression = typeof func.expression === 'string' ? [func.expression] : func.expression
+      expression.env = cloneEnv(func.env, functionArguments, env.stack.slice())
 
 
       debug && print(env, "Evaluating expression  :", formatExpression([func.expression]))
@@ -54,13 +56,14 @@ const execFunctionApplication = (env, name, args) => {
       }
       //debug && print(env, "with global environment:", func.env.functions)
 
-      const result = exec(newEnv, func.expression)[1] 
+      const result = exec(expression)
       debug && print( env, "Returning result  :", formatExpression(result))
 
 
       // We return the old environment in order not to pollute the global scope
       // with the vals that are local to the function
-      return [env, result]
+      result.env = env
+      return result
     } else {
       const errors = patternMatches.map(({error, }, i) =>
     `${formatExpression(implementations[i].args)} - ${error}\n`)
@@ -103,18 +106,12 @@ const execFunctionApplicationOrDataConstructor = (env, expression) => {
       // if it is a function, execute it.
       debug && print(env, "Executing a foreign function ",  formatExpression([name, ...args]))
       const result = foreignFunctions[name](args, env)
-      debug && print(env, "Returning from foreign function", result)
-      return [env, result]
+      debug && print(env, "Returning from foreign function: ", result)
+      result.env = env
+      return result
     } else {
       // if the name isn't a function, then we assume it's a data constructor i.e. a function without a definition
       // so we exec the values and return it as is
-      /*
-      env.types[name] = env.types[name] || new Set()
-      if (args.length === 1 && typeof args[0] === 'string') {
-        env.types[name].add(args[0])
-        // console.log("Added new constant value", env.types[name])
-      }
-      */
       debug && print(env, "Returning a new data constructor", formatExpression([name, ...args]))
 
       return execDataConstructor(env, name, args)
@@ -126,7 +123,7 @@ const exec = (expression) => {
   const env = expression.env
 
   if (!Array.isArray(expression)) {
-    return error('Invalid expression ', typeof expression , formatExpression(expression))
+    throw new Error('Invalid expression ' + typeof expression  + formatExpression(expression))
   } else if (typeof env !== 'object') {
     console.log('Error at evaluating ', expression, ".")
     throw new Error(`${env} is not an object`)
@@ -151,17 +148,16 @@ const exec = (expression) => {
       //Exec a bunch of statements
       //console.log("Executing an expression chain ", {expression})
 
-      let localEnv = env
       let localExpression = []
+      localExpression.env = env
       for (let anExpression of expression) {
-        anExpression.env = {...localEnv, stack: []}
+        anExpression.env = {...localExpression.env, stack: []}
         let newExpression = exec(anExpression)
       debug && print(env, "Executing an expression from chain: ", formatExpression(anExpression))
         if (debug) console.log("Updated environment", newExpression.env.functions)
-        localEnv = newExpression.env
         localExpression = newExpression
       }
-      return [localEnv, localExpression]
+      return localExpression
     }
   }
 }

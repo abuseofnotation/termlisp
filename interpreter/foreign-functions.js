@@ -7,14 +7,13 @@ module.exports = {
 
     console.log(formatExpression(value))
     if (debug) {
-      
       //console.log(env.functions)
       for (line of env.stack) {
         console.log(" - "+ formatExpression(line))
       }
     }
+    return []
   },
-  "#": () => undefined,
   eq: ([expressionOne, expressionTwo], env) => {
     if (equal(expressionOne, expressionTwo)) {
       return ["bool", "True"]
@@ -22,6 +21,5 @@ module.exports = {
       return ["bool", "False"]
     }
   },
-  env: (value, env) => console.log(env)
 }
 

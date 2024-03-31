@@ -44,10 +44,10 @@ const removeComments = (program) => program.split(/\r?\n/)
     } else {
       return line
     }
-  }).join('\n')
+  }).join('')
 
 const print = (a) => {
-  console.log(a)
+  //console.log(a)
   return a
 }
 
