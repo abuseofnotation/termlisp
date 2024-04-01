@@ -13,7 +13,7 @@
 (print (Bool a) = a)
 
 ;;Define the if clause, using pattern matching 
-;;(Only the rellevant clause is evaluated, because the language is lazy)
+;;(Only the relevant clause is evaluated, because the language is lazy)
 (if (:literal true) a b = a)
 (if (:literal false) a b = b)
 
@@ -24,7 +24,7 @@
 (assertEqual (if true foo bar) foo)
 (assertEqual (if false foo bar) bar)
 
-;;some other boolean functions
+;;Some other boolean functions
 (and (:literal true) (:literal true) = true)
 (and (Bool a) (Bool a) = false)
 
@@ -34,7 +34,7 @@
 (not (:literal false) = true)
 (not (:literal true) = false)
 
-;;Let's test them in a more 
+;;Test those, using DeMorgan's laws (or the other way around)
 (test-demorgan (Bool a) (Bool b) = (
   (one = not (and (Bool a) (Bool b)))
   (two = or (not (Bool a)) (not (Bool b)))
