@@ -1,0 +1,90 @@
+;;Foreign functions
+
+;;Print function is reexported, so we can later redefine it
+;;for each different datatype
+(print a = _print a)
+(eq a b = _eq a b)
+
+;;Booleans
+
+;;Shorthands for the data constructors of the boolean datatypes
+(true = Bool True)
+(false = Bool False)
+(print (Bool a) = a)
+
+;;Define the if clause, using pattern matching 
+;;(Only the rellevant clause is evaluated, because the language is lazy)
+(if (:literal true) a b = a)
+(if (:literal false) a b = b)
+
+;;We can define a little function we can use to test stuff 
+(assertEqual a b = (if (eq a b) () (print (error a is-not-equal-to b))))
+
+;;Check if the booleans work :) 
+(assertEqual (if true foo bar) foo)
+(assertEqual (if false foo bar) bar)
+
+;;
+;;Pairs
+;;
+
+;; Define the pair datatype 
+(cons a b = Pair a b)
+(car (Pair a b) = a)
+(cdr (Pair a b) = b)
+
+(print (Pair a b) = print a . b)
+
+;; Check if they work as well
+(assertEqual (car (cons foo bar)) foo)
+(assertEqual (cdr (cons foo bar)) bar)
+
+;; Peano arithmetic
+
+;; Define the Peano axioms
+(0 = Nat Zero)
+(+1 (Nat a) =  Nat (Succ a))
+
+;; Shortcuts for some numbers
+(1 = +1 0)
+(2 = +1 1)
+(3 = +1 2)
+(4 = +1 3)
+
+(assertEqual (+1 1) 2)
+(assertEqual (+1 2) 3)
+
+;; The plus function
+(+ (:literal 0) (Nat a) = Nat a)
+(+ (Nat (Succ a)) (Nat b) = (+1 (+ (Nat a) (Nat b))))
+
+(assertEqual (+ 0 0) 0)
+(assertEqual (+ 0 1) 1)
+;; May be occasionally useful
+(assertEqual (+ 1 1) 2)
+(assertEqual (+ 2 2) 4)
+
+;; Lambdas 
+
+;;They are defined with the lambda keyword
+(map a (:lambda fun) = fun a)
+
+;;You can pass an existing function
+(this-is a = (this is a))
+(assertEqual (map foo this-is) (this is foo))
+;;Or define one inline (but be sure to give it a name)
+(assertEqual (map bar (fun a = print (this is a))) (this is bar))
+
+;;Lists
+
+;; Define the list datatype
+;;(list (:rest list) = list (:rest list))
+;;(log list (:rest content) = content
+
+;; Some helper functions
+
+;;(head (list head (:rest tail)) a)
+;;(head (list head (:rest tail)) (list tail))
+
+;;(map (:lambda fun) (list head) = (list (fun head)) )
+;;(map (:lambda fun) (list head (:rest tail)) = (list (fun head) (:rest (map fun tail))))

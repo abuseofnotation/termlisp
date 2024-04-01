@@ -1,11 +1,9 @@
 const {formatExpression, equal} = require('./helpers')
 debug = false
 module.exports = {
-  print: (value, env) => {
-    // only needed in lazy evaluation
-    //value = exec(env, value)[1]
-
-    console.log(formatExpression(value))
+  _print: (values, exec) => {
+    debugger
+    console.log(formatExpression(values.map(exec)))
     if (debug) {
       //console.log(env.functions)
       for (line of env.stack) {
@@ -14,11 +12,11 @@ module.exports = {
     }
     return []
   },
-  eq: ([expressionOne, expressionTwo], env) => {
-    if (equal(expressionOne, expressionTwo)) {
-      return ["bool", "True"]
+  _eq: ([expressionOne, expressionTwo], exec) => {
+    if (equal(exec(expressionOne), exec(expressionTwo))) {
+      return ["Bool", "True"]
     } else {
-      return ["bool", "False"]
+      return ["Bool", "False"]
     }
   },
 }

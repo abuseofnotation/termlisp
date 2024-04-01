@@ -7,17 +7,19 @@ const rl = readline.createInterface({ input: process.stdin, output: process.stdo
 const prompt = (query) => new Promise((resolve) => rl.question(query, resolve));
 
 const execInteractive = (program) => {
-  let [env, result] = execString(program, { stack: [], functions: {}, types: {}})
-  const repl = () => prompt('> ')
-    .then((line) => { [env, result ] = execString('(print (' + line + '))', env)}).catch((err) => console.log(err))
+  let env = execString(program, { stack: [], functions: {}, types: {}})
+  const repl = (env) => prompt('> ')
+    .then((line) => execString('(print (' + line + '))', env))
+    .catch((err) => { console.log(err); return env})
     .then(repl)
-  repl()
+  repl(env)
 
 }
 
 try {
+  const prelude = fs.readFileSync(__dirname + "/prelude.tls", 'utf8');
   const data = fs.readFileSync( process.argv[2], 'utf8');
-  execInteractive(data)
+  execInteractive(prelude+data)
 } catch (err) {
   console.error(err);
 }

@@ -1,8 +1,10 @@
 exports.formatExpression = (expression) => {
-  if (Array.isArray(expression)) {
-    return '(' + expression.map(exports.formatExpression).join(' ') + ')'
+
+  const expressionNoExtraBrackets = Array.isArray(expression) && expression.length === 1 ? expression[0] : expression
+  if (Array.isArray(expressionNoExtraBrackets)) {
+    return '(' + expressionNoExtraBrackets.map(exports.formatExpression).join(' ') + ')'
   } else {
-    return expression
+    return expressionNoExtraBrackets
   }
 }
 exports.equal = (expressionOne, expressionTwo) => 
