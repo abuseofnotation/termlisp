@@ -18,7 +18,7 @@ const execInteractive = (program) => {
 
 try {
   const prelude = fs.readFileSync(__dirname + "/prelude.tls", 'utf8');
-  const data = fs.readFileSync( process.argv[2], 'utf8');
+  const data = process.argv[2] ? fs.readFileSync( process.argv[2], 'utf8') : ''
   execInteractive(prelude+data)
 } catch (err) {
   console.error(err);

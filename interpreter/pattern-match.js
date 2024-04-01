@@ -73,6 +73,28 @@ const patternMatchArgumentsByNames = (names, args, env, exec) => {
           throw Error(`Wrong use of the :lambda keyword, called with ${literal.length} arguments, but expected 1.`)
         }
 
+      /*
+      } else if (name[0] === ':rest') {
+        if (name.length === 2) {
+          const nameExecuted = exec(name[1])
+          if (nameExecuted.length === 1) {
+            const argumentName = nameExecuted[0]
+            // If the argument is a function that is already defined, 
+            // search for it's implementation and attach it.
+            if (value.length === 1) {
+              const implementation = value.env.functions[value[0]]
+              argumentEnv[functionName] = implementation
+            } else {
+            // If the function is given inline, execute it
+              argumentEnv[functionName] = exec(value)
+            }
+          } else {
+            throw Error(`Pattern-matching on :rest expressions is not supported... yet.`)
+          }
+        } else {
+          throw Error(`Wrong use of the :lambda keyword, called with ${literal.length} arguments, but expected 1.`)
+        }
+      */
 
       // Data structure
       // We destruct it and match it's contents recursively

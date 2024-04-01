@@ -66,16 +66,15 @@
 
 ;; Lambdas 
 
-;;They are defined with the lambda keyword
 (map a (:lambda fun) = fun a)
 
-;;You can pass an existing function
+;;Pass an existing function
 (this-is a = (this is a))
 (assertEqual (map foo this-is) (this is foo))
-;;Or define one inline (but be sure to give it a name)
-(assertEqual (map bar (fun a = print (this is a))) (this is bar))
+;;Pass an inline function (but be sure to give it a name)
+(assertEqual (map bar (fun a = (this is a))) (this is bar))
 
-;;Lists
+;;Lists (WIP)
 
 ;; Define the list datatype
 ;;(list (:rest list) = list (:rest list))
