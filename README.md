@@ -49,14 +49,14 @@ If you wish to define `if` as a function in a non-lazy (strict) language, the `p
 Language tutorial
 ==
 Let's start with BNR form:
-
+```
 <expression> ::= <atom> | <constructor> | <application> | <definition>
 atom ::= <char> | <atom> <char>
 datatype ::= "(" <atom> <expression>* ")"
 application ::= "(" <atom> <expression>* ")"
 definition ::= "("<atom> <datatype> "=" <expression> ")"
 chain ::= "(" <expression>* ")"
-
+```
 Like every other Lisp, term-lisp is based on atoms and lists. Atoms are the primitive values, lists contain them e.g. `foo`, `bar` `3` `+` are atoms, `(foo bar 3)` is a list.
 
 
@@ -82,7 +82,7 @@ Functional application in term-lisp works as in any other Lisp. A list of the ty
 
 Datatype
 ---
-What happens if we construct an expression that looks like function application, but the function being applied is not defined? In most languages, this would result in error, but in term-lisp we will create a new datatype/constructor, e.g. the expression `Pair foo bar` would evaluate to... `Pair foo bar` i.e. we will save a new object of type `Pair,  containing the values of `foo` and `bar`. What if the functions `foo` and `bar` aren't defined as well? They would evaluate to themselves too, like constructors without arguments. `True` and `False` are constructors without arguments as well.
+What happens if we construct an expression that looks like function application, but the function being applied is not defined? In most languages, this would result in error, but in term-lisp we will create a new datatype/constructor, e.g. the expression `Pair foo bar` would evaluate to... `Pair foo bar` i.e. we will save a new object of type `Pair`,  containing the values of `foo` and `bar`. What if the functions `foo` and `bar` aren't defined as well? They would evaluate to themselves too, like constructors without arguments. `True` and `False` are constructors without arguments as well.
 
 Function definition
 ---
