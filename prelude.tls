@@ -24,6 +24,26 @@
 (assertEqual (if true foo bar) foo)
 (assertEqual (if false foo bar) bar)
 
+;;some other boolean functions
+(and (:literal true) (:literal true) = true)
+(and (Bool a) (Bool a) = false)
+
+(or (:literal false) (:literal false) = false)
+(or (Bool a) (Bool a) = true)
+
+(not (:literal false) = true)
+(not (:literal true) = false)
+
+;;Let's test them in a more 
+(test-demorgan (Bool a) (Bool b) = (
+  (one = not (and (Bool a) (Bool b)))
+  (two = or (not (Bool a)) (not (Bool b)))
+  (assertEqual one two)
+))
+(test-demorgan true false)
+(test-demorgan true true)
+(test-demorgan false true)
+(test-demorgan false false)
 ;;
 ;;Pairs
 ;;
