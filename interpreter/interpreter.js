@@ -170,11 +170,10 @@ const execFunctionDefinition = (env, definition) => {
 }
 
 const execString = (string, env ) => {
-  //console.log(formatExpression(parse(string)))
   expression = parse(string)
   expression.env = env
   const result = exec(expression)
-  return result.env
+  return result
 }
 
 module.exports = { execString}

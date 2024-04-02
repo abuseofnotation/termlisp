@@ -109,7 +109,7 @@
 (assertEqual (head (list a b c)) a)
 (assertEqual (tail (list a b c)) (list b c))
 
-
+()
 ;;(map (:lambda fun) (List list-head) = (list (fun list-head)) )
 ;;(map (:lambda fun) (List list-head (:rest list-tail)) = (List (fun list-head) (:rest (map fun list-tail))))
 ;;assetEqual (map (fun  a = a a) (List a b c)) (List (a a) (b b) (c c))
