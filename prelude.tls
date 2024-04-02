@@ -10,7 +10,7 @@
 ;;Shorthands for the data constructors of the boolean datatypes
 (true = Bool True)
 (false = Bool False)
-(print (Bool a) = a)
+;;(print (Bool a) = a)
 
 ;;Define the if clause, using pattern matching 
 ;;(Only the relevant clause is evaluated, because the language is lazy)
@@ -53,7 +53,7 @@
 (car (Pair a b) = a)
 (cdr (Pair a b) = b)
 
-(print (Pair a b) = print a . b)
+;;(print (Pair a b) = print a . b)
 
 ;; Check if they work as well
 (assertEqual (car (cons foo bar)) foo)
@@ -97,13 +97,19 @@
 ;;Lists (WIP)
 
 ;; Define the list datatype
-;;(list (:rest list) = list (:rest list))
-;;(log list (:rest content) = content
+(list (:list elements) = elements)
+
+(a-list = (list a b c d))
 
 ;; Some helper functions
 
-;;(head (list head (:rest tail)) a)
-;;(head (list head (:rest tail)) (list tail))
+(head (List list-head (:list list-tail)) = list-head)
+(tail (List list-head (:list list-tail)) = list-tail)
 
-;;(map (:lambda fun) (list head) = (list (fun head)) )
-;;(map (:lambda fun) (list head (:rest tail)) = (list (fun head) (:rest (map fun tail))))
+(assertEqual (head (list a b c)) a)
+(assertEqual (tail (list a b c)) (list b c))
+
+
+;;(map (:lambda fun) (List list-head) = (list (fun list-head)) )
+;;(map (:lambda fun) (List list-head (:rest list-tail)) = (List (fun list-head) (:rest (map fun list-tail))))
+;;assetEqual (map (fun  a = a a) (List a b c)) (List (a a) (b b) (c c))
