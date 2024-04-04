@@ -1,0 +1,2 @@
+(printNat (Nat a) = _print a)
+(printNat foo)

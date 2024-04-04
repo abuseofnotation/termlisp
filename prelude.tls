@@ -21,7 +21,7 @@
 (assertEqual a b = (if (eq a b) () (print (error a is-not-equal-to b))))
 
 ;;Check if the booleans work :) 
-(assertEqual (if true foo bar) foo)
+(assertEqual (if true foo bar) bar)
 (assertEqual (if false foo bar) bar)
 
 ;;Some other boolean functions
