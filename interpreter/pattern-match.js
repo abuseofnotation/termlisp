@@ -1,12 +1,19 @@
 const error = (error, env, object) => ({type: 'error', error, env, object})
-const {formatExpression, equal} = require('./helpers')
+const {formatExpression, equal, print} = require('./helpers')
 
-const debug = false
+const debug = true
 
-const patternMatchArgumentsByNames = (names, args, env, exec) => {
+const formatEnvironment = (object) => Object.keys(object)
+  .map((key) => formatExpression([
+    [key], 
+  ])).join('\n')
+
+const removeExtraBrackets = (expression) => Array.isArray(expression) && expression.length === 1 ? expression[0] : expression
+
+const patternMatchArgumentsByNames = (names, namesEnv, args, env, exec) => {
 
   if (names.length > 0) {
-    if (debug) console.log(`Matching expressions ${formatExpression(names)} with values ${formatExpression(args)}`)
+    if (debug) print(env, `Matching expressions ${formatExpression(names)} with values ${formatExpression(args)}`)
     //if (debug) console.log(`with environment`, env.functions)
   }
 
@@ -14,24 +21,19 @@ const patternMatchArgumentsByNames = (names, args, env, exec) => {
   for (let i = 0; i < names.length; i++) {  
     let name = names[i]
     let value = args[i]
-    if (value === undefined){
+    if (value === undefined) {
       console.log({names, args})
       throw Error(`No value supplied for ${formatExpression(name)}`)
     } else if (false) {
       //TODO check if name === func.name (results in infinite loop)
     } else {
-       if (debug) console.log(`Matching expression ${formatExpression(name)} with value ${formatExpression(value)}`);
+       if (debug) print(env, `Matching expression ${formatExpression(name)} with value ${formatExpression(value)}`);
       if (!Array.isArray(name)) {
-        // When we encounter data constructors,
-        // we pattern-match it and add the elements
-        //argumentEnv[name] = [{ args: [], expression: value, env}]
-        throw Error('System error: Invalid signature')
-
-      // Normal argument
-      // We pattern-match it and add it to the environment
+        //throw Error('System error: Invalid signature')
+        argumentEnv[name] = [{ args: [], expression: value, env}]
 
       } else if (name.length === 1) {
-        argumentEnv[name] = [{ args: [], expression: value, env}]
+        argumentEnv[name[0]] = [{ args: [], expression: value, env}]
 
       // Literal argument
       // We check if the value is equal to the argument
@@ -39,7 +41,9 @@ const patternMatchArgumentsByNames = (names, args, env, exec) => {
       } else if (name[0] === ':literal') {
         if (name.length === 2) {
           // We have to execute the values in order to compare
-          const nameExecuted = exec(name[1])
+          nameMatch = [name[1]]
+          nameMatch.env = namesEnv
+          const nameExecuted = exec(nameMatch)
           const valueExecuted = exec(value)
           if (equal(nameExecuted, valueExecuted)) {
             // We don't do anything in case of a successfull literal pattern match
@@ -53,24 +57,24 @@ const patternMatchArgumentsByNames = (names, args, env, exec) => {
 
       // Lambda expression
       // We add the function to the environment
-
       } else if (name[0] === ':lambda') {
+
+        if (debug) print(env, `Parsing lambda expression ${formatExpression(name)}`);
         if (name.length === 2) {
-          const nameExecuted = exec(name[1])
-          if (nameExecuted.length === 1) {
-            const functionName = nameExecuted[0]
+            const functionName = name[1]
             // If the argument is a function that is already defined, 
             // search for it's implementation and attach it.
             if (value.length === 1) {
+
+              if (debug) print(env, `Lambda expression references to an existing function ${formatExpression(value[0])}`);
               const implementation = value.env.functions[value[0]]
+              if (debug) print(env, `Function has an implementation`, implementation);
               argumentEnv[functionName] = implementation
             } else {
             // If the function is given inline, execute it
+              if (debug) print(env, `Lambda expression references to a new function ${formatExpression(value)}`);
               argumentEnv[functionName] = exec(value)
             }
-          } else {
-            throw Error(`Pattern-matching on :lambda expressions is not supported... yet.`)
-          }
         } else {
           throw Error(`Wrong use of the :lambda keyword, called with ${literal.length} arguments, but expected 1.`)
         }
@@ -78,6 +82,7 @@ const patternMatchArgumentsByNames = (names, args, env, exec) => {
       } else if (name[0] === ':list') {
         debug && console.log(`Executing a :list expression at index ${i}`)
         if (name.length === 2) {
+          name[1].env = namesEnv
           const nameExecuted = exec(name[1])
           if (nameExecuted.length === 1) {
             const argumentName = nameExecuted[0]
@@ -95,7 +100,7 @@ const patternMatchArgumentsByNames = (names, args, env, exec) => {
       // We destruct it and match it's contents recursively
 
       } else {
-        const [nameType, ...nameVals] = exec(name)
+        const [nameType, ...nameVals] = name
         const [argType, ...argVals] = exec(value)
         // Typecheck 
         if (nameType !== argType) {
@@ -104,7 +109,7 @@ const patternMatchArgumentsByNames = (names, args, env, exec) => {
           if (debug) console.log(`Assigning values ${formatExpression(nameVals)} with values ${formatExpression(argVals)}`);
           //TODO report errors from here 
           // (actually it seems that it works as is, hm...)
-          Object.assign(argumentEnv, patternMatchArgumentsByNames(nameVals, argVals, env, exec))
+          Object.assign(argumentEnv, patternMatchArgumentsByNames(nameVals, namesEnv, argVals, env, exec))
         }
       }
     }

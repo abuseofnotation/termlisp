@@ -1,2 +1,14 @@
-(printNat (Nat a) = _print a)
-(printNat foo)
+;;print a = _print a
+;;(printNat (Nat a) = print a)
+;;(a = (printNat foo))
+
+
+(true = Bool True)
+(false = Bool False)
+
+(if (:literal true) a b = a)
+;;(if (:literal false) a b = b)
+
+;;(foo a = (if (a) (a is true) (a is false)))
+
+;;(foo true)

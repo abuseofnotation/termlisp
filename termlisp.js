@@ -9,7 +9,9 @@ const rl = readline.createInterface({ input: process.stdin, output: process.stdo
 const prompt = (query) => new Promise((resolve) => rl.question(query, resolve));
 
 const execInteractive = (program) => {
-  //let types = typecheckString(program, { stack: [], functions: {}, types: {}})
+
+  //let typingErrors = typecheckString(program, { stack: [], functions: {}, types: {}})
+  //console.log(typingErrors.env.types)
   let result = execString(program, { stack: [], functions: {}, types: {}})
   const repl = (env) => {
     return prompt('> ')
@@ -23,7 +25,6 @@ const execInteractive = (program) => {
     .catch((err) => { console.log(err); return env})
     .then(repl)}
   repl(result.env)
-
 }
 
 try {

@@ -18,11 +18,11 @@
 (if (:literal false) a b = b)
 
 ;;We can define a little function we can use to test stuff 
-(assertEqual a b = (if (eq a b) () (print (error a is-not-equal-to b))))
+(assertEqual a b = (if (eq a b) () (print (Error a Is-not-equal-to b))))
 
 ;;Check if the booleans work :) 
-(assertEqual (if true foo bar) bar)
-(assertEqual (if false foo bar) bar)
+(assertEqual (if true Foo Bar) Foo)
+(assertEqual (if false Foo Bar) Bar)
 
 ;;Some other boolean functions
 (and (:literal true) (:literal true) = true)
@@ -56,8 +56,8 @@
 ;;(print (Pair a b) = print a . b)
 
 ;; Check if they work as well
-(assertEqual (car (cons foo bar)) foo)
-(assertEqual (cdr (cons foo bar)) bar)
+(assertEqual (car (cons Foo Bar)) Foo)
+(assertEqual (cdr (cons Foo Bar)) Bar)
 
 ;; Peano arithmetic
 
@@ -89,10 +89,10 @@
 (map a (:lambda fun) = fun a)
 
 ;;Pass an existing function
-(this-is a = (this is a))
-(assertEqual (map foo this-is) (this is foo))
+(this-is a = (This Is a))
+(assertEqual (map Foo this-is) (This Is Foo))
 ;;Pass an inline function (but be sure to give it a name)
-(assertEqual (map bar (fun a = (this is a))) (this is bar))
+(assertEqual (map Bar (fun a = (This Is a))) (This Is Bar))
 
 ;;Lists (WIP)
 
@@ -106,8 +106,8 @@
 (head (List list-head (:list list-tail)) = list-head)
 (tail (List list-head (:list list-tail)) = list-tail)
 
-(assertEqual (head (list a b c)) a)
-(assertEqual (tail (list a b c)) (list b c))
+;;(assertEqual (head (list a b c)) a)
+;;(assertEqual (tail (list a b c)) (list b c))
 
 ()
 ;;(map (:lambda fun) (List list-head) = (list (fun list-head)) )

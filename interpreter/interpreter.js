@@ -1,9 +1,9 @@
 const {name, parse } = require('./parser')
-const {formatExpression} = require('./helpers')
+const {formatExpression, parseFunctionDefinition} = require('./helpers')
 const {patternMatchArgumentsByNames} = require('./pattern-match')
 const foreignFunctions = require('./foreign-functions')
 
-const debug = false
+const debug = true
 
 const print = (env, message, ...args) => console.log((env.stack.map(() => "-").join("")) + message , ...args)
 
@@ -14,14 +14,11 @@ const error = (error, env, object) => {
   return (['error', error, env, object])
 }
 
-
-//TODO perhaps we can use the function that execs a bunch of statements sequentially
 const execFunctionArguments = (env, argsUnexecuted) => {
   const makeEnv = () => ({...env, stack: env.stack.slice()})
   return argsUnexecuted.map((arg) => {
     const argument = typeof arg === 'string' ? [arg] : arg
-    argument.env = makeEnv()
-    return exec(argument)
+    return argument
   })
 }
 
@@ -37,20 +34,11 @@ const execDataConstructor = (env, name, args) => {
   return expression
 }
 
-const execFunctionApplication = (env, name, args) => {
-    const implementations = env.functions[name]
-    const patternMatches = env.functions[name].map((func) => 
-      patternMatchArgumentsByNames(execFunctionArguments(func.env, func.args), args, env, exec)
-    )
-    const patternMatchIndex = patternMatches.findIndex(({type}) => type !== 'error')
-    if (patternMatchIndex !== -1) {
-      const func = implementations[patternMatchIndex]
-      const functionArguments = patternMatches[patternMatchIndex]
+const execFunctionApplicationExpression = (env, func, functionArguments) => {
       const expression = typeof func.expression === 'string' ? [func.expression] : func.expression
       expression.env = cloneEnv(func.env, functionArguments, env.stack.slice())
-
-      debug && print(env, "Evaluating expression  :", formatExpression([args, func.expression]))
-      if (args.length > 0) {
+      debug && print(env, "Evaluating expression  :", formatExpression([functionArguments, func.expression]))
+      if (functionArguments.length > 0) {
         debug && print(env, "with local environment :", functionArguments)
       }
       //debug && print(env, "with global environment:", func.env.functions)
@@ -62,15 +50,66 @@ const execFunctionApplication = (env, name, args) => {
       // with the vals that are local to the function
       result.env = env
       return result
+}
+
+const execFunctionApplication = (env, name, args) => {
+  const prettify = (a) => a.map((arg) => typeof arg === 'string' ? [arg] : arg)
+  const implementations = env.functions[name]
+  if (implementations !== undefined) {
+    env.stack.unshift([name, args])
+    const patternMatches = implementations.map((func) => 
+      patternMatchArgumentsByNames(prettify(func.args), func.env, args, env,  exec)
+    )
+    const patternMatchIndex = patternMatches.findIndex(({type}) => type !== 'error')
+    if (patternMatchIndex !== -1) {
+      const func = implementations[patternMatchIndex]
+      debug && print(env, "found matching function implementation", formatExpression([func.args, func.expression]))
+      const functionArguments = patternMatches[patternMatchIndex]
+      return execFunctionApplicationExpression(env, func, functionArguments)
     } else {
       const errors = patternMatches.map(({error, }, i) =>
     `${formatExpression(implementations[i].args)} - ${error}\n`)
 
       return error(`Failed to call function '${name}' with arguments ${formatExpression(args.map(exec))}\n ${errors}`, env)
     }
+
+  } else if (foreignFunctions[name] !== undefined) {
+    //check if val is a foreign function
+    // if it is a function, execute it.
+    debug && print(env, "Executing a foreign function ",  formatExpression([name, ...args]))
+    const result = foreignFunctions[name](args, exec)
+    debug && print(env, "Returning from foreign function: ", result)
+    result.env = env
+    return result
+  } else {
+      return error(`Failed to call function '${name}' with arguments ${formatExpression(args.map(exec))}\n No such function is defined`, env)
+  }
 }
 
-const execFunctionApplicationOrDataConstructor = (env, expression) => {
+const execFunctionApplicationOrDataConstructor = (env, name, argsUnexecuted) => {
+    
+    //First exec the arguments
+    const args = argsUnexecuted.map((arg) => {
+      const argument = typeof arg === 'string' ? [arg] : arg
+      argument.env = env; 
+      return argument
+    })
+    const firstLetter = name[0]
+
+
+
+    if (firstLetter === firstLetter.toLowerCase()) {
+      debug && print(env, "Applying a function", formatExpression([name, ...args]))
+      return execFunctionApplication(env, name, args)
+    } else {
+      debug && print(env, "Returning a data constructor ", formatExpression([name, ...args]))
+      return execDataConstructor(env, name, args)
+    }
+}
+
+
+
+/*
     env.stack.unshift(expression)
     //Each expression is a name, and arguments
     const [name, ...argsUnexecuted] = expression
@@ -89,7 +128,6 @@ const execFunctionApplicationOrDataConstructor = (env, expression) => {
         debug && print(env, "Executing function application:", formatExpression([name, argsUnexecuted ]))
         return execFunctionApplication(env, name, args)
       } else {
-
         debug && print(env, "Returning a data constructor ", formatExpression([name, ...args]))
         return execDataConstructor(env, name, args)
       }
@@ -110,8 +148,10 @@ const execFunctionApplicationOrDataConstructor = (env, expression) => {
       //TODO, record the constructor for typechecking purposes
     }
 }
+*/
 
 const exec = (expression) => {
+
   const env = expression.env
   if (!Array.isArray(expression)) {
     throw new Error('Invalid expression: ' + typeof expression + " " + formatExpression(expression))
@@ -123,8 +163,10 @@ const exec = (expression) => {
 
   } else if (env.functions === undefined) {
     throw new Error(`Faulty environment object: ${JSON.stringify(env)}`)
-  } else { 
-    //if (debug) console.log("Executing expression", formatExpression(expression))
+  } else if (expression.filter((a) => (a === "=")).length > 1) { 
+    throw new Error(`Expression ${formatExpression(expression)} has more than one "=" symbol, did you forget to put it into parenthesis?`)
+  } else {
+    if (debug) print(env, "Executing expression", formatExpression(expression))
     const fnIndex = expression.indexOf('=')
 
     if (fnIndex !== -1 ) {
@@ -133,8 +175,9 @@ const exec = (expression) => {
 
     //TODO functions are not always literals, account for that
     } else if (typeof expression[0] === 'string') {
-
-      return execFunctionApplicationOrDataConstructor(env, expression)
+      //Each expression is a name, and arguments
+      const [name, ...args] = expression
+      return execFunctionApplicationOrDataConstructor(env, name, args)
     } else {
       //Exec a bunch of statements
       //console.log("Executing an expression chain ", {expression})
@@ -153,18 +196,19 @@ const exec = (expression) => {
   }
 }
 
+
+
 const execFunctionDefinition = (env, definition) => {
-    const fnIndex = definition.indexOf('=')
-    const [signature, expression] = [definition.slice(0, fnIndex), definition.slice(fnIndex + 1) ]
-    const [name, ...args] = signature
-    const fun = {args, expression, env}
+    const fun = parseFunctionDefinition(env, definition)
+    const name = definition[0]
     if (env.functions[name] === undefined) {
+      debug && console.log(`Registering a new function ${name}`)
       env.functions[name] = [fun]
     } else {
+      debug && console.log(`Registering a new implementation of ${name}`)
       env.functions[name].push(fun)
     }
     const result = env.functions[name]
-    //const result = []
     result.env = env 
     return result
 }
