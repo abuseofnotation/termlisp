@@ -1,26 +1,12 @@
 const {name, parse } = require('./parser')
-const {formatExpression, parseFunctionDefinition} = require('./helpers')
+const {formatExpression, error, print } = require('./helpers')
+const {parseFunctionDefinition} = require('./types')
 const {patternMatchArgumentsByNames} = require('./pattern-match')
 const foreignFunctions = require('./foreign-functions')
 
-const debug = true
+const debug = false
 
-const print = (env, message, ...args) => console.log((env.stack.map(() => "-").join("")) + message , ...args)
-
-
-const error = (error, env, object) => {
-  const trace = env.stack.map((line) => "   at "+ formatExpression(line) + "\n")
-  throw `Error: ${error} \n ${trace}`
-  return (['error', error, env, object])
-}
-
-const execFunctionArguments = (env, argsUnexecuted) => {
-  const makeEnv = () => ({...env, stack: env.stack.slice()})
-  return argsUnexecuted.map((arg) => {
-    const argument = typeof arg === 'string' ? [arg] : arg
-    return argument
-  })
-}
+const addBrackets = (a) => a.map((arg) => typeof arg === 'string' ? [arg] : arg)
 
 const cloneEnv = (env, argumentFunctions, stack) => ({
     stack,
@@ -29,21 +15,24 @@ const cloneEnv = (env, argumentFunctions, stack) => ({
 })
 
 const execDataConstructor = (env, name, args) => {
-  const expression = args.length > 0 ? [name, ...args.map(exec)] : [name]
+  const newEnv = () => cloneEnv(env, {}, env.stack.slice())
+  const expression = args.length > 0 ? [name, ...args.map((arg) => exec(newEnv(), arg))] : [name]
   expression.env = env
   return expression
 }
 
+const formatEnv = (obj) => Object.keys(obj)
+  .map((key) => key + " : " +  formatExpression(obj[key][0].expression))
+  .join(', ')
+
 const execFunctionApplicationExpression = (env, func, functionArguments) => {
       const expression = typeof func.expression === 'string' ? [func.expression] : func.expression
-      expression.env = cloneEnv(func.env, functionArguments, env.stack.slice())
-      debug && print(env, "Evaluating expression  :", formatExpression([functionArguments, func.expression]))
-      if (functionArguments.length > 0) {
-        debug && print(env, "with local environment :", functionArguments)
-      }
-      //debug && print(env, "with global environment:", func.env.functions)
+      const argumentEnv = cloneEnv(func.env, functionArguments, env.stack.slice())
+      // debug && print(env, "Substituting variables :", formatExpression([func.expression]))
+        debug && print(env, "With local env :", formatEnv(functionArguments))
+      //debug && print(env, "With global environment:", func.env.functions)
 
-      const result = exec(expression)
+      const result = exec(argumentEnv, expression)
       debug && print( env, "Returning result  :", formatExpression(result))
 
       // We return the old environment in order not to pollute the global scope
@@ -53,106 +42,84 @@ const execFunctionApplicationExpression = (env, func, functionArguments) => {
 }
 
 const execFunctionApplication = (env, name, args) => {
-  const prettify = (a) => a.map((arg) => typeof arg === 'string' ? [arg] : arg)
   const implementations = env.functions[name]
   if (implementations !== undefined) {
     env.stack.unshift([name, args])
     const patternMatches = implementations.map((func) => 
-      patternMatchArgumentsByNames(prettify(func.args), func.env, args, env,  exec)
+      patternMatchArgumentsByNames(addBrackets(func.args), func.env, args, env,  exec)
     )
     const patternMatchIndex = patternMatches.findIndex(({type}) => type !== 'error')
     if (patternMatchIndex !== -1) {
       const func = implementations[patternMatchIndex]
-      debug && print(env, "found matching function implementation", formatExpression([func.args, func.expression]))
+      debug && print(env, "Found implementation: ", formatExpression([name, func.args, func.expression]))
       const functionArguments = patternMatches[patternMatchIndex]
       return execFunctionApplicationExpression(env, func, functionArguments)
     } else {
       const errors = patternMatches.map(({error, }, i) =>
     `${formatExpression(implementations[i].args)} - ${error}\n`)
 
-      return error(`Failed to call function '${name}' with arguments ${formatExpression(args.map(exec))}\n ${errors}`, env)
+      return error(`Failed to call function '${name}' with arguments ${formatExpression(args)}\n ${errors}`, env)
     }
+  } else {
+      return error(`Failed to call function '${name}' with arguments ${formatExpression(args)}\n No such function is defined`, env)
+  }
+}
 
-  } else if (foreignFunctions[name] !== undefined) {
+const execForeignFunctionApplication = (env, name, args) => {
+  if (foreignFunctions[name] !== undefined) {
     //check if val is a foreign function
     // if it is a function, execute it.
     debug && print(env, "Executing a foreign function ",  formatExpression([name, ...args]))
-    const result = foreignFunctions[name](args, exec)
+    const result = foreignFunctions[name](args, (val) => exec(env, val))
     debug && print(env, "Returning from foreign function: ", result)
     result.env = env
     return result
   } else {
-      return error(`Failed to call function '${name}' with arguments ${formatExpression(args.map(exec))}\n No such function is defined`, env)
+      return error(`Failed to call foreign function '${name}' with arguments ${formatExpression(args.map(exec))}\n No such function is defined`, env)
   }
 }
 
-const execFunctionApplicationOrDataConstructor = (env, name, argsUnexecuted) => {
-    
-    //First exec the arguments
-    const args = argsUnexecuted.map((arg) => {
-      const argument = typeof arg === 'string' ? [arg] : arg
-      argument.env = env; 
-      return argument
-    })
-    const firstLetter = name[0]
-
-
-
-    if (firstLetter === firstLetter.toLowerCase()) {
-      debug && print(env, "Applying a function", formatExpression([name, ...args]))
-      return execFunctionApplication(env, name, args)
-    } else {
-      debug && print(env, "Returning a data constructor ", formatExpression([name, ...args]))
-      return execDataConstructor(env, name, args)
-    }
+const execTypeDeclaration = (env, args) => {
+  const [name, ...functions] = args
+  const moduleEnv = exec(cloneEnv(env, {}, env.stack.slice()) , functions).env
+  //TODO very sloppy, module environments should have their own scope.
+  for (fnName of Object.keys(moduleEnv.functions)) {
+    env.functions[`${name}.${fnName}`] = moduleEnv.functions[fnName]
+  }
+  env.functions[name] = []
+  result = []
+  result.env = env
+  return result
 }
 
+const execFunctionApplicationOrDataConstructor = (env, name, argsUnexecuted) => {
+    //debug && print(env, "Encountered a name ", formatExpression([name, ...argsUnexecuted]))
 
-
-/*
-    env.stack.unshift(expression)
-    //Each expression is a name, and arguments
-    const [name, ...argsUnexecuted] = expression
-    //First exec the arguments
-    const args = argsUnexecuted.map((arg) => {
-      const argument = typeof arg === 'string' ? [arg] : arg
+    const makeThunk = (arg) => {
+      const argument = typeof arg == 'string' ? [arg] : arg
       argument.env = env; 
       return argument
-    })
-   
-    //check if val is a function 
-    // if it is a function, execute it.
-    const func = env.functions[name]
-    if (func !== undefined) {
-      if (func.length > 0) {
-        debug && print(env, "Executing function application:", formatExpression([name, argsUnexecuted ]))
+    }
+    if (name === ":type") {
+      return execTypeDeclaration(env, argsUnexecuted)
+    } else {
+      const args = argsUnexecuted.map(makeThunk)
+      if (env.functions[name] !== undefined) {
+        debug && print(env, "Executing function call: ", formatExpression([name, ...args]))
         return execFunctionApplication(env, name, args)
+      } else if (foreignFunctions[name] !== undefined) {
+        debug && print(env, "Executing a foreign function call:", formatExpression([name, ...args]))
+        return execForeignFunctionApplication(env, name, args)
       } else {
-        debug && print(env, "Returning a data constructor ", formatExpression([name, ...args]))
+        debug && print(env, "New a data constructor ", formatExpression([name, ...args]))
         return execDataConstructor(env, name, args)
       }
-    } else if (foreignFunctions[name] !== undefined) {
-      //check if val is a foreign function
-      // if it is a function, execute it.
-      debug && print(env, "Executing a foreign function ",  formatExpression([name, ...args]))
-      const result = foreignFunctions[name](args, exec)
-      debug && print(env, "Returning from foreign function: ", result)
-      result.env = env
-      return result
-    } else {
-      // if the name isn't a function, then we assume it's a data constructor i.e. a function without a definition
-      // so we exec the values and return it as is
-      debug && print(env, "Returning a new data constructor", formatExpression([name, ...args]))
-
-      return execDataConstructor(env, name, args)
-      //TODO, record the constructor for typechecking purposes
     }
 }
-*/
 
-const exec = (expression) => {
 
-  const env = expression.env
+
+const exec = (env, expression) => {
   if (!Array.isArray(expression)) {
     throw new Error('Invalid expression: ' + typeof expression + " " + formatExpression(expression))
   } else if (typeof env !== 'object') {
@@ -166,7 +133,7 @@ const exec = (expression) => {
   } else if (expression.filter((a) => (a === "=")).length > 1) { 
     throw new Error(`Expression ${formatExpression(expression)} has more than one "=" symbol, did you forget to put it into parenthesis?`)
   } else {
-    if (debug) print(env, "Executing expression", formatExpression(expression))
+    if (debug) print(env, "Executing expression: ", formatExpression(expression))
     const fnIndex = expression.indexOf('=')
 
     if (fnIndex !== -1 ) {
@@ -179,16 +146,15 @@ const exec = (expression) => {
       const [name, ...args] = expression
       return execFunctionApplicationOrDataConstructor(env, name, args)
     } else {
+      debug && print(env, "Executing an expression chain")
       //Exec a bunch of statements
-      //console.log("Executing an expression chain ", {expression})
-
       let localExpression = []
       localExpression.env = env
       for (let anExpression of expression) {
-        anExpression.env = {...localExpression.env, stack: []}
-        let newExpression = exec(anExpression)
-      debug && print(env, "Executing an expression from chain: ", formatExpression(anExpression))
-        if (debug) console.log("Updated environment", newExpression.env.functions)
+        const localEnv = {...localExpression.env, stack: env.stack.slice()}
+        let newExpression = exec(localEnv, anExpression)
+        //debug && print(env, "Executing an expression from chain: ")
+        //if (debug) console.log("Updated environment", Object.keys(newExpression.env.functions).join(', '))
         localExpression = newExpression
       }
       return localExpression
@@ -202,7 +168,7 @@ const execFunctionDefinition = (env, definition) => {
     const fun = parseFunctionDefinition(env, definition)
     const name = definition[0]
     if (env.functions[name] === undefined) {
-      debug && console.log(`Registering a new function ${name}`)
+      debug && console.log(`New function: ${name}`)
       env.functions[name] = [fun]
     } else {
       debug && console.log(`Registering a new implementation of ${name}`)
@@ -215,8 +181,7 @@ const execFunctionDefinition = (env, definition) => {
 
 const execString = (string, env ) => {
   expression = parse(string)
-  expression.env = env
-  const result = exec(expression)
+  const result = exec(env, expression)
   return result
 }
 

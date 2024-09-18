@@ -16,8 +16,7 @@ const typecheckDataConstructor = (env, name, args) => {
   return expression
 }
 
-const typecheck = (expression) => {
-  const env = expression.env
+const typecheck = (env, expression) => {
   if (!Array.isArray(expression)) {
     throw new Error('Invalid expression: ' + typeof expression + " " + formatExpression(expression))
   } else if (typeof env !== 'object') {

@@ -1,22 +1,28 @@
-exports.formatExpression = (expression) => {
+const compose = (f, g) => (...args) => f(g(...args))
 
-  const expressionNoExtraBrackets = Array.isArray(expression) && expression.length === 1 ? expression[0] : expression
-  if (Array.isArray(expressionNoExtraBrackets)) {
-    return '(' + expressionNoExtraBrackets.map(exports.formatExpression).join(' ') + ')'
+exports.addBrackets = (a) => a.map((arg) => typeof arg === 'string' ? [arg] : arg)
+
+exports.error = (error, env, object) => {
+  const trace = env.stack.map((line) => "   at "+ formatExpression(line) + "\n")
+  throw `Error: ${error} \n ${trace}`
+  return (['error', error, env, object])
+}
+
+
+exports.removeExtraBrackets = (expression) => Array.isArray(expression) && expression.length === 1 ? expression[0] : expression
+
+const formatExpression = compose((expression) => {
+  if (Array.isArray(expression)) {
+    return '(' + expression.map(exports.formatExpression).join(' ') + ')'
   } else {
-    return expressionNoExtraBrackets
+    return expression
   }
-}
+}, exports.removeExtraBrackets)
+
 exports.equal = (expressionOne, expressionTwo) => 
-exports.formatExpression(expressionOne) === exports.formatExpression(expressionTwo)
-
-exports.parseFunctionDefinition = (env, definition) => {
-  const fnIndex = definition.indexOf('=')
-  const [signature, expression] = [definition.slice(0, fnIndex), definition.slice(fnIndex + 1) ]
-  const [name, ...args] = signature
-  return ({name, args, expression, env})
-}
+  exports.formatExpression(expressionOne) === exports.formatExpression(expressionTwo)
 
 
-exports.print = (env, message, ...args) => console.log((env.stack.map(() => "-").join("")) + message , ...args)
+exports.print = (env, message, ...args) => console.log((env.stack.map(() => "  ").join("")) + message.padEnd(30) , ...args)
 
+exports.formatExpression = formatExpression

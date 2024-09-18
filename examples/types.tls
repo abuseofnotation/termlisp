@@ -1,14 +1,41 @@
-;;print a = _print a
+(print a = _print a)
 ;;(printNat (Nat a) = print a)
 ;;(a = (printNat foo))
 
 
-(true = Bool True)
-(false = Bool False)
+(:type Bool
+  (true = Bool True)
+  (false = Bool False)
+)
 
-(if (:literal true) a b = a)
-;;(if (:literal false) a b = b)
+;;(Bool Invalid) --- error
 
-;;(foo a = (if (a) (a is true) (a is false)))
+(if (:literal Bool.true) a b = a)
+(if (:literal Bool.false) a b = b)
 
-;;(foo true)
+(takesFoo (Foo a) = a)
+
+(takesFooImplicitly b = takesFoo b)
+
+(wrongCall = takesFooImplicitly (Bar a))
+
+(wrongCall)
+
+;;(returnBool b = b)
+
+
+;;(rightCall a = (if (returnBool a) foo bar))
+
+;;this will result in a type error
+;;(wrongCall = (if NotBool foo bar))
+
+;;(callWithBool a = (if a foo bar))
+;;this will result in a type error
+;;(a = (callWithBool NotBool))
+
+;;this too
+;;(invalid = (Bool Invalid))
+
+
+;;(invalid)
+

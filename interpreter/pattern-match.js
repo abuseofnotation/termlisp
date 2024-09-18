@@ -1,7 +1,7 @@
 const error = (error, env, object) => ({type: 'error', error, env, object})
 const {formatExpression, equal, print} = require('./helpers')
 
-const debug = true
+const debug = false
 
 const formatEnvironment = (object) => Object.keys(object)
   .map((key) => formatExpression([
@@ -10,7 +10,10 @@ const formatEnvironment = (object) => Object.keys(object)
 
 const removeExtraBrackets = (expression) => Array.isArray(expression) && expression.length === 1 ? expression[0] : expression
 
+
 const patternMatchArgumentsByNames = (names, namesEnv, args, env, exec) => {
+
+  const execThunk = val => exec(val.env, val)
 
   if (names.length > 0) {
     if (debug) print(env, `Matching expressions ${formatExpression(names)} with values ${formatExpression(args)}`)
@@ -22,8 +25,7 @@ const patternMatchArgumentsByNames = (names, namesEnv, args, env, exec) => {
     let name = names[i]
     let value = args[i]
     if (value === undefined) {
-      console.log({names, args})
-      throw Error(`No value supplied for ${formatExpression(name)}`)
+      return error(`No value supplied for ${formatExpression(name)}`)
     } else if (false) {
       //TODO check if name === func.name (results in infinite loop)
     } else {
@@ -42,9 +44,8 @@ const patternMatchArgumentsByNames = (names, namesEnv, args, env, exec) => {
         if (name.length === 2) {
           // We have to execute the values in order to compare
           nameMatch = [name[1]]
-          nameMatch.env = namesEnv
-          const nameExecuted = exec(nameMatch)
-          const valueExecuted = exec(value)
+          const nameExecuted = exec(namesEnv, nameMatch)
+          const valueExecuted = execThunk(value)
           if (equal(nameExecuted, valueExecuted)) {
             // We don't do anything in case of a successfull literal pattern match
           } else {
@@ -73,7 +74,7 @@ const patternMatchArgumentsByNames = (names, namesEnv, args, env, exec) => {
             } else {
             // If the function is given inline, execute it
               if (debug) print(env, `Lambda expression references to a new function ${formatExpression(value)}`);
-              argumentEnv[functionName] = exec(value)
+              argumentEnv[functionName] = execThunk(value)
             }
         } else {
           throw Error(`Wrong use of the :lambda keyword, called with ${literal.length} arguments, but expected 1.`)
@@ -82,16 +83,10 @@ const patternMatchArgumentsByNames = (names, namesEnv, args, env, exec) => {
       } else if (name[0] === ':list') {
         debug && console.log(`Executing a :list expression at index ${i}`)
         if (name.length === 2) {
-          name[1].env = namesEnv
-          const nameExecuted = exec(name[1])
-          if (nameExecuted.length === 1) {
-            const argumentName = nameExecuted[0]
+          const argumentName = name[1]
             debug && console.log(`Assigning ${argumentName} to ${formatExpression(args.slice(i))}`)
             argumentEnv[argumentName] = [{ args: [], expression: ['List'].concat(args.slice(i)), env}]
             break
-          } else {
-            throw Error(`Pattern-matching on :list expressions is not supported.`)
-          }
         } else {
           throw Error(`Wrong use of the :list keyword, called with ${literal.length} arguments, but expected 1.`)
         }
@@ -101,7 +96,7 @@ const patternMatchArgumentsByNames = (names, namesEnv, args, env, exec) => {
 
       } else {
         const [nameType, ...nameVals] = name
-        const [argType, ...argVals] = exec(value)
+        const [argType, ...argVals] = execThunk(value)
         // Typecheck 
         if (nameType !== argType) {
           return error(`Expected a type '${nameType}', but got ${argType}`, env, {name, value})

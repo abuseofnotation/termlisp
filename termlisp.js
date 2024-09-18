@@ -1,7 +1,7 @@
 const fs = require('node:fs');
 const {formatExpression} = require('./interpreter/helpers')
 const {execString } = require('./interpreter/interpreter')
-const {typecheckString } = require('./typechecker/typechecker')
+//const {typecheckString } = require('./typechecker/typechecker')
 
 const readline = require('readline');
 
@@ -28,8 +28,8 @@ const execInteractive = (program) => {
 }
 
 try {
-  //const prelude = fs.readFileSync(__dirname + "/prelude.tls", 'utf8');
-  const prelude = ''
+  const prelude = fs.readFileSync(__dirname + "/prelude.tls", 'utf8');
+  //const prelude = ''
   const data = process.argv[2] ? fs.readFileSync( process.argv[2], 'utf8') : ''
   execInteractive(prelude+data)
 } catch (err) {

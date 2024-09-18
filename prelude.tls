@@ -106,10 +106,10 @@
 (head (List list-head (:list list-tail)) = list-head)
 (tail (List list-head (:list list-tail)) = list-tail)
 
-;;(assertEqual (head (list a b c)) a)
-;;(assertEqual (tail (list a b c)) (list b c))
+(assertEqual (head (list A B C)) A)
+(assertEqual (tail (list A B C)) (list B C))
 
-()
 ;;(map (:lambda fun) (List list-head) = (list (fun list-head)) )
 ;;(map (:lambda fun) (List list-head (:rest list-tail)) = (List (fun list-head) (:rest (map fun list-tail))))
 ;;assetEqual (map (fun  a = a a) (List a b c)) (List (a a) (b b) (c c))
+(print (All systems go))

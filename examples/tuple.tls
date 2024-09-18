@@ -1,6 +1,6 @@
-car (pair a b) => a
-cdr (pair a b) => b
+(cons a b = Pair a b)
+(car (Pair a b) = a)
+(cdr (Pair a b) = b)
 
-cons a b => pair a b
-
-print (cdr (cons 1 2)) =2
+(a = ((cdr (cons 1 2))))
+(a)
