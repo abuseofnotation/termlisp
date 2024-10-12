@@ -1,7 +1,8 @@
 const fs = require('node:fs');
 const {formatExpression} = require('./interpreter/helpers')
-const {execString } = require('./interpreter/interpreter')
-//const {typecheckString } = require('./typechecker/typechecker')
+const {execString, env } = require('./interpreter/interpreter')
+const {typecheckString} = require('./typechecker/typechecker')
+require('./tests')
 
 const readline = require('readline');
 
@@ -10,13 +11,20 @@ const prompt = (query) => new Promise((resolve) => rl.question(query, resolve));
 
 const execInteractive = (program) => {
 
-  //let typingErrors = typecheckString(program, { stack: [], functions: {}, types: {}})
+  //let typingErrors = typecheckString(program, env())
   //console.log(typingErrors.env.types)
-  let result = execString(program, { stack: [], functions: {}, types: {}})
+
+  let result = execString(program, env())
   const repl = (env) => {
     return prompt('> ')
     .then((line) => {
+      env.history = []
       const result = execString(line, env)
+
+      for (log of result.env.history) {
+        console.log(log)
+      }
+
       if (typeof formatExpression(result) === 'string') {
         console.log(formatExpression(result))
       }
@@ -24,7 +32,7 @@ const execInteractive = (program) => {
     })
     .catch((err) => { console.log(err); return env})
     .then(repl)}
-  repl(result.env)
+  return repl(result.env)
 }
 
 try {

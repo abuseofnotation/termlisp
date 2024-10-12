@@ -1,17 +1,12 @@
-(print a = _print a)
+;;(print a = _print a)
 ;;(printNat (Nat a) = print a)
 ;;(a = (printNat foo))
-
-
-(:type Bool
-  (true = Bool True)
-  (false = Bool False)
-)
-
-;;(Bool Invalid) --- error
-
-(if (:literal Bool.true) a b = a)
-(if (:literal Bool.false) a b = b)
+;;(:type Bool
+;;  (true = Bool True)
+;;(false = Bool False)
+;;)
+;;(if (:literal Bool.true) a b = a)
+;;(if (:literal Bool.false) a b = b)
 
 (takesFoo (Foo a) = a)
 

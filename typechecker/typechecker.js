@@ -1,9 +1,11 @@
 const {name, parse } = require('./../interpreter/parser')
-const {formatExpression, parseFunctionDefinition, print} = require('./../interpreter/helpers')
+const {formatExpression, print} = require('./../interpreter/helpers')
+const {parseFunctionDefinition } = require('./../interpreter/types')
 
 debug = true
 
 const typecheckDataConstructor = (env, name, args) => {
+  console.log({env, name, args})
   const expression = args.length > 0 ? [name, ...args.map(typecheck)] : [name]
   if (env.types[name] === undefined) {
     env.types[name] = args
@@ -22,9 +24,6 @@ const typecheck = (env, expression) => {
   } else if (typeof env !== 'object') {
     console.log('Error at evaluating ', expression, ".")
     throw new Error(`${env} is not an object`)
-  } else if (env.stack.length > 100) {
-    return error("Stack Overflow", env)
-
   } else if (env.functions === undefined) {
     throw new Error(`Faulty environment object: ${JSON.stringify(env)}`)
   } else { 
@@ -46,8 +45,8 @@ const typecheck = (env, expression) => {
       let localExpression = []
       localExpression.env = env
       for (let anExpression of expression) {
-        anExpression.env = {...localExpression.env, stack: []}
-        let newExpression = typecheck(anExpression)
+        anExpression.env = {...localExpression.env}
+        let newExpression = typecheck(anExpression.env, anExpression)
       debug && print(env, "Typechecking an expression from chain: ", formatExpression(anExpression))
         if (debug) console.log("Updated environment", newExpression.env.functions)
         localExpression = newExpression
@@ -58,7 +57,8 @@ const typecheck = (env, expression) => {
 }
 
 const typecheckFunctionApplicationOrDataConstructor = (env, expression) => {
-    env.stack.unshift(expression)
+    debug && print(env, "Typechecking", formatExpression(expression))
+    console.log(env)
     //Each expression is a name, and arguments
     const [name, ...argsUnexecuted] = expression
     //First exec the arguments
@@ -67,18 +67,10 @@ const typecheckFunctionApplicationOrDataConstructor = (env, expression) => {
       argument.env = env; 
       return argument
     })
-   
-    //check if val is a function 
-    // if it is a function, execute it.
     const func = env.functions[name]
     if (func !== undefined) {
-      if (func.length > 0) {
         debug && print(env, "Typechecking function application:", formatExpression([name, argsUnexecuted ]))
-        return execFunctionApplication(env, name, args)
-      } else {
-        debug && print(env, "Returning a data constructor ", formatExpression([name, ...args]))
-        return typecheckDataConstructor(env, name, args)
-      }
+        return typecheckFunctionApplication(env, name, args)
     } else {
       // if the name isn't a function, then we assume it's a data constructor i.e. a function without a definition
       // so we exec the values and return it as is
@@ -86,6 +78,13 @@ const typecheckFunctionApplicationOrDataConstructor = (env, expression) => {
       return typecheckDataConstructor(env, name, args)
     }
 }
+
+const typecheckFunctionApplication = (env, name, args) => {
+    const func = env.functions[name]
+    console.log(func.returns)
+    return func.returns
+}
+
 
 const newTypeVariable = (argumentName) => argumentName
 
@@ -102,8 +101,9 @@ const determineArgumentType = (env, expression, argument) => {
 }
 
 const cloneEnv = (env, argumentFunctions) => ({
-    stack,
     functions: { ...env.functions, ...argumentFunctions },
+    stack: [],
+    types: {}
 })
 
 const argsToEnv = (arguments) => {
@@ -124,6 +124,9 @@ const typecheckFunctionDefinition = (env, definition) => {
   const argumentsEnv = cloneEnv(env, argsToEnv(fun.args))
   const returnType = typecheck(argumentsEnv, fun.expression)
   print(env, `With return type ${returnType}`)
+  fun.returns = returnType
+  env.functions[fun.name] = fun
+  fun.env = env
   return fun
 }
 
@@ -131,7 +134,7 @@ exports.typecheck = typecheck
 exports.typecheckString = (string, env ) => {
   expression = parse(string)
   expression.env = env
-  const result = typecheck(expression)
+  const result = typecheck(env, expression)
   return result
 }
 

@@ -2,7 +2,6 @@ const {formatExpression, error, print, removeExtraBrackets, equal} = require('./
 
 const debug = false
 
-
 const extractEnv = (args) => args.reduce((env, arg) => {
   if (typeof arg === 'string') {
     env[arg] = null
@@ -56,7 +55,7 @@ const getFunctionTypes = (env, args, expression) => {
     return [args, name]
   } else {
     //results = env.functions[name].map(({types}) => getFunctionApplicationType(env, types, fnArgs))
-    return getFunctionApplicationType(env, env.functions[name][0].types, fnArgs)
+    return getFunctionApplicationType(env, env.functions[name].types, fnArgs)
   }
 }
 
@@ -66,10 +65,10 @@ exports.parseFunctionDefinition = (env, definition) => {
   const [signature, expression] = [definition.slice(0, fnIndex), definition.slice(fnIndex + 1) ]
   const [name, ...args] = signature
   debug && print(env, "Analysing : ", name)
-  const types = getFunctionTypes(env, args, removeExtraBrackets(expression))
-  debug && print(env, "Registering function: ", name)
+  //const types = getFunctionTypes(env, args, removeExtraBrackets(expression))
+  debug && print(env, "Parsing function: ", name)
   debug && print(env, "with types          : ", types)
-  return ({args, types, expression, env})
+  return ({args, expression, env, name})
 }
 
 

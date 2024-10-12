@@ -113,3 +113,6 @@
 ;;(map (:lambda fun) (List list-head (:rest list-tail)) = (List (fun list-head) (:rest (map fun list-tail))))
 ;;assetEqual (map (fun  a = a a) (List a b c)) (List (a a) (b b) (c c))
 (print (All systems go))
+
+(foo a = a)
+(foo bar)
